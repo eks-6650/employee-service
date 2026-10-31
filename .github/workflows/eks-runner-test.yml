@@ -1,0 +1,16 @@
+name: Test EKS ARC Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-eks-runner:
+    runs-on: eks-arc-runners
+
+    steps:
+      - name: Check runner environment
+        run: |
+          echo "Hello from EKS!"
+          hostname
+          uname -a
+          whoami
