@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, linux, x64, devops-lab]
+    runs-on: eks-arc-runners
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
