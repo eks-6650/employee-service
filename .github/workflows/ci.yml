@@ -14,6 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: eks-arc-runners
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -21,9 +22,11 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v6
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
-          cache: 'gradle'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x gradlew
