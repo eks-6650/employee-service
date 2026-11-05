@@ -8,9 +8,10 @@ jobs:
     runs-on: eks-arc-runners
 
     steps:
-      - name: Check runner environment
+      - name: Verify Docker Engine
         run: |
-          echo "Hello from EKS!"
-          hostname
-          uname -a
-          whoami
+          echo "Docker Client and Server:"
+          docker version
+
+          echo "Docker Engine Information:"
+          docker info
