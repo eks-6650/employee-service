@@ -1,10 +1,8 @@
+
 name: CI
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
@@ -14,27 +12,34 @@ permissions:
 
 jobs:
   build:
+    name: Build, Test and Push to ECR
     runs-on: eks-arc-runners
 
     steps:
+      # 1. Checkout source code
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up Java
+      # 2. Install Java 21
+      - name: Set up Java 21
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
 
+      # 3. Configure Gradle and caching
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # 4. Make Gradle wrapper executable
       - name: Make Gradle Wrapper Executable
         run: chmod +x gradlew
 
+      # 5. Build application and run tests
       - name: Build and Run Tests
         run: ./gradlew clean build --no-daemon
 
+      # 6. Upload executable JAR
       - name: Upload Executable JAR
         uses: actions/upload-artifact@v7
         with:
@@ -43,14 +48,48 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # 7. Verify Docker Engine
+      - name: Verify Docker Engine
+        run: |
+          docker version
+          docker info
+
+      # 8. Configure temporary AWS credentials using OIDC
       - name: Configure AWS credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::784004375037:role/github-actions-ecr-push
           aws-region: ca-central-1
 
-      - name: Verify AWS identity
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      # 9. Authenticate Docker to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 10. Build Docker image
+      - name: Build Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: employee-service
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          aws sts get-caller-identity
+          echo "Building Docker image..."
+          echo "Registry: $ECR_REGISTRY"
+          echo "Repository: $ECR_REPOSITORY"
+          echo "Tag: $IMAGE_TAG"
+
+          docker build \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+
+      # 11. Push Docker image to ECR
+      - name: Push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: employee-service
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push \
+            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo "Successfully pushed:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
