@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build:
@@ -41,3 +42,15 @@ jobs:
           path: build/libs/*.jar
           if-no-files-found: error
           retention-days: 7
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::784004375037:role/github-actions-ecr-push
+          aws-region: ca-central-1
+
+      - name: Verify AWS identity
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          aws sts get-caller-identity
